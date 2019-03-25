@@ -209,9 +209,15 @@ option(BUILD_SHARED_LIBS "Create shared libraries by default" ON)
 ###############################################################################
 include(${PROJECT_SOURCE_DIR}/cmake/common/eprosima_libraries.cmake)
 
+set(THIRDPARTY ON)
+
 eprosima_find_package(fastcdr REQUIRED)
 eprosima_find_thirdparty(Asio asio)
 eprosima_find_thirdparty(TinyXML2 tinyxml2)
+
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${PROJECT_SOURCE_DIR}/thirdparty/asio)
+find_package(Asio REQUIRED)
+set(ASIO_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/thirdparty/asio/asio/include)
 
 if(ANDROID)
     eprosima_find_thirdparty(android-ifaddrs android-ifaddrs)
@@ -267,9 +273,9 @@ add_subdirectory(src/cpp)
 ###############################################################################
 # Testing options
 ###############################################################################
-enable_testing()
-include(CTest)
-add_subdirectory(test)
+#enable_testing()
+#include(CTest)
+#add_subdirectory(test)
 
 ###############################################################################
 # Examples
