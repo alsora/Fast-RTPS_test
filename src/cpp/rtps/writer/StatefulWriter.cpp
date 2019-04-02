@@ -66,7 +66,7 @@ StatefulWriter::StatefulWriter(
     , currentUsageSendBufferSize_(static_cast<int32_t>(pimpl->get_min_network_send_buffer_size()))
 {
     m_heartbeatCount = 0;
-    m_HBReaderEntityId = 
+    m_HBReaderEntityId =
         (guid.entityId == c_EntityId_SEDPPubWriter)    ? c_EntityId_SEDPPubReader :
         (guid.entityId == c_EntityId_SEDPSubWriter)    ? c_EntityId_SEDPSubReader :
         (guid.entityId == c_EntityId_WriterLiveliness) ? c_EntityId_ReaderLiveliness :
@@ -121,7 +121,9 @@ StatefulWriter::~StatefulWriter()
  *	CHANGE-RELATED METHODS
  */
 
-void StatefulWriter::unsent_change_added_to_history(CacheChange_t* change)
+void StatefulWriter::unsent_change_added_to_history(
+        CacheChange_t* change,
+        std::chrono::time_point<std::chrono::steady_clock> max_blocking_time)
 {
     std::lock_guard<std::recursive_timed_mutex> guard(mp_mutex);
 
@@ -173,7 +175,7 @@ void StatefulWriter::unsent_change_added_to_history(CacheChange_t* change)
                 if (!m_separateSendingEnabled)
                 {
                     RTPSMessageGroup group(mp_RTPSParticipant, this, RTPSMessageGroup::WRITER, m_cdrmessages,
-                            change->write_params.max_blocking_time_point());
+                            max_blocking_time);
                     if (!group.add_data(*change, all_remote_readers_, mAllShrinkedLocatorList, expectsInlineQos))
                     {
                         logError(RTPS_WRITER, "Error sending change " << change->sequenceNumber);
@@ -190,7 +192,7 @@ void StatefulWriter::unsent_change_added_to_history(CacheChange_t* change)
                         const std::vector<GUID_t>& guids = it->guid_as_vector();
                         const LocatorList_t& locators = it->remote_locators_shrinked();
                         RTPSMessageGroup group(mp_RTPSParticipant, this, RTPSMessageGroup::WRITER, m_cdrmessages,
-                                locators, guids, change->write_params.max_blocking_time_point());
+                                locators, guids, max_blocking_time);
                         if (!group.add_data(*change, guids, locators, it->expects_inline_qos()))
                         {
                             logError(RTPS_WRITER, "Error sending change " << change->sequenceNumber);
@@ -297,7 +299,7 @@ void StatefulWriter::send_any_unsent_changes()
                         if (unsentChange != nullptr && unsentChange->isRelevant() && unsentChange->isValid())
                         {
                             // As we checked we are not async, we know we cannot have fragments
-                            if (group.add_data(*(unsentChange->getChange()), guids, locators, 
+                            if (group.add_data(*(unsentChange->getChange()), guids, locators,
                                         remoteReader->expects_inline_qos()))
                             {
                                 remoteReader->set_change_to_status(seqNum, UNDERWAY, true);
@@ -972,7 +974,7 @@ bool StatefulWriter::send_periodic_heartbeat()
 }
 
 void StatefulWriter::send_heartbeat_to_nts(
-    ReaderProxy& remoteReaderProxy, 
+    ReaderProxy& remoteReaderProxy,
     bool final)
 {
     try
@@ -1030,7 +1032,7 @@ void StatefulWriter::send_heartbeat_nts_(
 }
 
 void StatefulWriter::send_heartbeat_piggyback_nts_(
-    const std::vector<GUID_t>& remote_readers, 
+    const std::vector<GUID_t>& remote_readers,
     const LocatorList_t& locators,
     RTPSMessageGroup& message_group,
     uint32_t& last_bytes_processed)
@@ -1096,10 +1098,10 @@ void StatefulWriter::perform_nack_supression(const GUID_t& reader_guid)
 }
 
 bool StatefulWriter::process_acknack(
-        const GUID_t& writer_guid, 
-        const GUID_t& reader_guid, 
+        const GUID_t& writer_guid,
+        const GUID_t& reader_guid,
         uint32_t ack_count,
-        const SequenceNumberSet_t& sn_set, 
+        const SequenceNumberSet_t& sn_set,
         bool final_flag,
         bool &result)
 {

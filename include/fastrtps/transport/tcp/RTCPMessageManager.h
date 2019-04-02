@@ -51,8 +51,7 @@ public:
     /** @name Send RTCP Message Methods.
     * These methods create RTPS messages for different types
     */
-    TCPTransactionId sendConnectionRequest(
-            std::shared_ptr<TCPChannelResource>& channel);
+    TCPTransactionId sendConnectionRequest(std::shared_ptr<TCPChannelResource>& channel);
 
     TCPTransactionId sendOpenLogicalPortRequest(
             TCPChannelResource* channel,
@@ -74,51 +73,71 @@ public:
             std::shared_ptr<TCPChannelResource>& channel,
             KeepAliveRequest_t &request);
 
-    TCPTransactionId sendKeepAliveRequest(
-            std::shared_ptr<TCPChannelResource>& channel);
+    TCPTransactionId sendKeepAliveRequest(std::shared_ptr<TCPChannelResource>& channel);
 
     TCPTransactionId sendLogicalPortIsClosedRequest(
-            TCPChannelResource* channel,
+            std::shared_ptr<TCPChannelResource>& channel,
             LogicalPortIsClosedRequest_t& request);
 
     TCPTransactionId sendLogicalPortIsClosedRequest(
-            TCPChannelResource* channel,
+            std::shared_ptr<TCPChannelResource>& channel,
             uint16_t port);
 
-    TCPTransactionId sendUnbindConnectionRequest(
-            std::shared_ptr<TCPChannelResource>& channel);
+    TCPTransactionId sendUnbindConnectionRequest(std::shared_ptr<TCPChannelResource>& channel);
 
     /** @name Process RTCP Message Methods.
     * These methods create RTPS messages for different types
     */
-    ResponseCode processBindConnectionRequest(std::shared_ptr<TCPChannelResource>& channel, const ConnectionRequest_t &request,
-        const TCPTransactionId &transactionId, Locator_t &localLocator);
+    ResponseCode processBindConnectionRequest(
+            std::shared_ptr<TCPChannelResource>& channel,
+            const ConnectionRequest_t &request,
+            const TCPTransactionId &transactionId,
+            Locator_t &localLocator);
 
-    virtual ResponseCode processOpenLogicalPortRequest(std::shared_ptr<TCPChannelResource>& channel,
-        const OpenLogicalPortRequest_t &request, const TCPTransactionId &transactionId);
+    virtual ResponseCode processOpenLogicalPortRequest(
+            std::shared_ptr<TCPChannelResource>& channel,
+            const OpenLogicalPortRequest_t &request,
+            const TCPTransactionId &transactionId);
 
-    void processCheckLogicalPortsRequest(std::shared_ptr<TCPChannelResource>& channel,
-        const CheckLogicalPortsRequest_t &request, const TCPTransactionId &transactionId);
+    void processCheckLogicalPortsRequest(
+            std::shared_ptr<TCPChannelResource>& channel,
+            const CheckLogicalPortsRequest_t &request,
+            const TCPTransactionId &transactionId);
 
-    ResponseCode processKeepAliveRequest(std::shared_ptr<TCPChannelResource>& channel, const KeepAliveRequest_t &request,
-        const TCPTransactionId &transactionId);
+    ResponseCode processKeepAliveRequest(
+            std::shared_ptr<TCPChannelResource>& channel,
+            const KeepAliveRequest_t &request,
+            const TCPTransactionId &transactionId);
 
-    void processLogicalPortIsClosedRequest(std::shared_ptr<TCPChannelResource>& channel,
-        const LogicalPortIsClosedRequest_t &request, const TCPTransactionId &transactionId);
+    void processLogicalPortIsClosedRequest(
+            std::shared_ptr<TCPChannelResource>& channel,
+            const LogicalPortIsClosedRequest_t &request,
+            const TCPTransactionId &transactionId);
 
-    ResponseCode processBindConnectionResponse(std::shared_ptr<TCPChannelResource>& channel,
-        const BindConnectionResponse_t &response, const TCPTransactionId &transactionId);
+    ResponseCode processBindConnectionResponse(
+            std::shared_ptr<TCPChannelResource>& channel,
+            const BindConnectionResponse_t &response,
+            const TCPTransactionId &transactionId);
 
-    ResponseCode processCheckLogicalPortsResponse(std::shared_ptr<TCPChannelResource>& channel,
-        const CheckLogicalPortsResponse_t &response, const TCPTransactionId &transactionId);
+    ResponseCode processCheckLogicalPortsResponse(
+            std::shared_ptr<TCPChannelResource>& channel,
+            const CheckLogicalPortsResponse_t &response,
+            const TCPTransactionId &transactionId);
 
-    ResponseCode processOpenLogicalPortResponse(std::shared_ptr<TCPChannelResource>& channel, ResponseCode respCode,
-        const TCPTransactionId &transactionId);
+    ResponseCode processOpenLogicalPortResponse(
+            std::shared_ptr<TCPChannelResource>& channel,
+            ResponseCode respCode,
+            const TCPTransactionId &transactionId);
 
-    ResponseCode processKeepAliveResponse(std::shared_ptr<TCPChannelResource>& channel, ResponseCode respCode,
-        const TCPTransactionId &transactionId);
+    ResponseCode processKeepAliveResponse(
+            std::shared_ptr<TCPChannelResource>& channel,
+            ResponseCode respCode,
+            const TCPTransactionId &transactionId);
 
-    ResponseCode processRTCPMessage(std::shared_ptr<TCPChannelResource>& channel, octet* receive_buffer, size_t receivedSize);
+    ResponseCode processRTCPMessage(
+            std::shared_ptr<TCPChannelResource>& channel,
+            octet* receive_buffer,
+            size_t receivedSize);
 
     static uint32_t& addToCRC(uint32_t &crc, octet data);
 
@@ -171,21 +190,24 @@ protected:
 
     size_t sendMessage(
             TCPChannelResource* channel,
-            const CDRMessage_t &msg) const;
+            const CDRMessage_t &msg,
+            bool blocking = true) const;
 
     bool sendData(
             std::shared_ptr<TCPChannelResource>& channel,
             TCPCPMKind kind,
             const TCPTransactionId &transactionId,
             const SerializedPayload_t *payload = nullptr,
-            const ResponseCode respCode = RETCODE_VOID);
+            const ResponseCode respCode = RETCODE_VOID,
+            bool blocking = true);
 
     bool sendData(
             TCPChannelResource* channel,
             TCPCPMKind kind,
             const TCPTransactionId &transactionId,
             const SerializedPayload_t *payload = nullptr,
-            const ResponseCode respCode = RETCODE_VOID);
+            const ResponseCode respCode = RETCODE_VOID,
+            bool blocking = true);
 
     void fillHeaders(TCPCPMKind kind, const TCPTransactionId &transactionId, TCPControlMsgHeader &retCtrlHeader,
         TCPHeader &header, const SerializedPayload_t *payload = nullptr, const ResponseCode *respCode = nullptr);

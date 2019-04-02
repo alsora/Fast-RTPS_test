@@ -73,7 +73,8 @@ RTCPMessageManager::~RTCPMessageManager()
 
 size_t RTCPMessageManager::sendMessage(
         TCPChannelResource* channel,
-        const CDRMessage_t &msg) const
+        const CDRMessage_t &msg,
+        bool blocking) const
 {
     if (!alive())
     {
@@ -81,11 +82,13 @@ size_t RTCPMessageManager::sendMessage(
     }
 
     asio::error_code ec;
-    size_t send = channel->send(msg.buffer, msg.length, ec);
-    if (send != msg.length)
+    size_t send = channel->send(nullptr, 0, msg.buffer, msg.length, ec, blocking);
+    if (send != msg.length || ec)
     {
-        logError(RTCP, "Bad sent size..." << send << " bytes of " << msg.length << " bytes: " << ec.message());
+        logInfo(RTCP, "Bad sent size..." << send << " bytes of " << msg.length << " bytes: " << ec.message());
+        send = 0;
     }
+
     //logInfo(RTCP, "Sent " << send << " bytes");
     return send;
 }
@@ -95,9 +98,22 @@ bool RTCPMessageManager::sendData(
         TCPCPMKind kind,
         const TCPTransactionId& transaction_id,
         const SerializedPayload_t* payload,
-        const ResponseCode respCode)
+        const ResponseCode respCode,
+        bool blocking)
 {
-    return sendData(channel.get(), kind, transaction_id, payload, respCode);
+    if(sendData(channel.get(), kind, transaction_id, payload, respCode, blocking))
+    {
+        return true;
+    }
+
+    if(TCPChannelResource::TCPConnectionType::TCP_CONNECT_TYPE == channel->tcp_connection_type() &&
+            TCPChannelResource::eConnectionStatus::eDisconnected == channel->connection_status())
+    {
+        channel->set_all_ports_pending();
+        channel->connect(channel);
+    }
+
+    return false;
 }
 
 bool RTCPMessageManager::sendData(
@@ -105,7 +121,8 @@ bool RTCPMessageManager::sendData(
         TCPCPMKind kind,
         const TCPTransactionId &transaction_id,
         const SerializedPayload_t *payload,
-        const ResponseCode respCode)
+        const ResponseCode respCode,
+        bool blocking)
 {
     if (!alive())
     {
@@ -133,7 +150,7 @@ bool RTCPMessageManager::sendData(
         RTPSMessageCreator::addCustomContent(&msg, payload->data, payload->length); // Data
     }
 
-    return sendMessage(channel, msg) > 0;
+    return sendMessage(channel, msg, blocking) > 0;
 }
 
 uint32_t& RTCPMessageManager::addToCRC(
@@ -299,13 +316,13 @@ TCPTransactionId RTCPMessageManager::sendConnectionRequest(
 
     logInfo(RTCP_MSG, "Send [BIND_CONNECTION_REQUEST] PhysicalPort: " << IPLocator::getPhysicalPort(locator));
     //logError(DEBUG, "Sending Connection Request with locator: " << IPLocator::to_string(request.transportLocator()));
+    channel->change_status(TCPChannelResource::eConnectionStatus::eWaitingForBindResponse);
     TCPTransactionId id = getTransactionId();
     bool success = sendData(channel, BIND_CONNECTION_REQUEST, id, &payload);
     if (!success)
     {
         logError(RTCP, "Failed sending Connection Request");
     }
-    channel->change_status(TCPChannelResource::eConnectionStatus::eWaitingForBindResponse);
     return id;
 }
 
@@ -359,7 +376,7 @@ TCPTransactionId RTCPMessageManager::sendKeepAliveRequest(
     request.serialize(&payload);
     logInfo(RTCP_MSG, "Send [KEEP_ALIVE_REQUEST]");
     TCPTransactionId id = getTransactionId();
-    sendData(channel, KEEP_ALIVE_REQUEST, id, &payload);
+    sendData(channel, KEEP_ALIVE_REQUEST, id, &payload, RETCODE_VOID, false);
     return id;
 }
 
@@ -372,7 +389,7 @@ TCPTransactionId RTCPMessageManager::sendKeepAliveRequest(
 }
 
 TCPTransactionId RTCPMessageManager::sendLogicalPortIsClosedRequest(
-        TCPChannelResource* channel,
+        std::shared_ptr<TCPChannelResource>& channel,
         LogicalPortIsClosedRequest_t &request)
 {
     SerializedPayload_t payload(static_cast<uint32_t>(
@@ -386,12 +403,12 @@ TCPTransactionId RTCPMessageManager::sendLogicalPortIsClosedRequest(
 }
 
 TCPTransactionId RTCPMessageManager::sendLogicalPortIsClosedRequest(
-        TCPChannelResource *p_channel_resource,
+        std::shared_ptr<TCPChannelResource>& channel,
         uint16_t port)
 {
     LogicalPortIsClosedRequest_t request;
     request.logicalPort(port);
-    return sendLogicalPortIsClosedRequest(p_channel_resource, request);
+    return sendLogicalPortIsClosedRequest(channel, request);
 }
 
 TCPTransactionId RTCPMessageManager::sendUnbindConnectionRequest(
@@ -560,7 +577,7 @@ ResponseCode RTCPMessageManager::processBindConnectionResponse(
     {
         logInfo(RTCP, "Connection established (Resp) (physical: "
                 << IPLocator::getPhysicalPort(channel->locator()) << ")");
-        channel->change_status(TCPChannelResource::eConnectionStatus::eEstablished);
+        channel->change_status(TCPChannelResource::eConnectionStatus::eEstablished, this);
         removeTransactionId(transaction_id);
         //logError(DEBUG, "Received Connection Response with locator: " << response.locator());
         return RETCODE_OK;
@@ -579,7 +596,7 @@ ResponseCode RTCPMessageManager::processCheckLogicalPortsResponse(
 {
     if (findTransactionId(transaction_id))
     {
-        channel->process_check_logical_ports_response(transaction_id, response.availableLogicalPorts());
+        channel->process_check_logical_ports_response(transaction_id, response.availableLogicalPorts(), this);
         removeTransactionId(transaction_id);
         return RETCODE_OK;
     }
@@ -601,12 +618,12 @@ ResponseCode RTCPMessageManager::processOpenLogicalPortResponse(
         {
         case RETCODE_OK:
         {
-            channel->add_logical_port_response(transaction_id, true);
+            channel->add_logical_port_response(transaction_id, true, this);
         }
         break;
         case RETCODE_INVALID_PORT:
         {
-            channel->add_logical_port_response(transaction_id, false);
+            channel->add_logical_port_response(transaction_id, false, this);
         }
         break;
         default:

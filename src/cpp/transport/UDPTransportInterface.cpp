@@ -228,9 +228,8 @@ UDPChannelResource* UDPTransportInterface::CreateInputChannelResource(const std:
     UDPChannelResource* p_channel_resource = new UDPChannelResource(unicastSocket, maxMsgSize);
     p_channel_resource->message_receiver(receiver);
     p_channel_resource->interface(sInterface);
-    std::thread* newThread = new std::thread(&UDPTransportInterface::perform_listen_operation, this,
-        p_channel_resource, locator);
-    p_channel_resource->thread(newThread);
+    p_channel_resource->thread(std::thread(&UDPTransportInterface::perform_listen_operation, this,
+        p_channel_resource, locator));
     return p_channel_resource;
 }
 
@@ -452,7 +451,7 @@ bool UDPTransportInterface::ReleaseInputChannel(const Locator_t& locator, const 
             socket_base::message_flags flags = 0;
 
             // We ignore the error message because some OS don't allow this functionality like Windows (WSAENETUNREACH) or Mac (EADDRNOTAVAIL)
-            socket.send_to(asio::buffer("EPRORTPSCLOSE", 13), destinationEndpoint, flags, ec);
+            socket.send_to(asio::buffer("EPRORTPSCLOSE", 13), destinationEndpoint,flags, ec);
 
             socket.close();
         }
@@ -467,7 +466,12 @@ bool UDPTransportInterface::ReleaseInputChannel(const Locator_t& locator, const 
 
             // We then send to the address of the input locator
             auto destinationEndpoint = generate_local_endpoint(locator, port);
-            socket.send_to(asio::buffer("EPRORTPSCLOSE", 13), destinationEndpoint);
+
+            asio::error_code ec;
+            socket_base::message_flags flags = 0;
+
+            // We ignore the error message because some OS don't allow this functionality like Windows (WSAENETUNREACH) or Mac (EADDRNOTAVAIL)
+            socket.send_to(asio::buffer("EPRORTPSCLOSE", 13), destinationEndpoint, flags, ec);
 
             socket.close();
         }
@@ -521,7 +525,7 @@ bool UDPTransportInterface::send(
         }
         catch (const std::exception& error)
         {
-            logWarning(RTPS_MSG_OUT, "Error: " << error.what());
+            logWarning(RTPS_MSG_OUT, error.what());
             return false;
         }
 

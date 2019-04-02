@@ -778,8 +778,8 @@ void RTPSParticipantImpl::createReceiverResources(LocatorList_t& Locator_list, b
         bool ret = m_network_Factory.BuildReceiverResources(*it_loc, size, newItemsBuffer);
         if (!ret && ApplyMutation)
         {
-            int tries = 0;
-            while (!ret && (tries < MutationTries))
+            uint32_t tries = 0;
+            while (!ret && (tries < m_att.builtin.mutation_tries))
             {
                 tries++;
                 *it_loc = applyLocatorAdaptRule(*it_loc);
@@ -811,17 +811,17 @@ void RTPSParticipantImpl::createSenderResources(LocatorList_t& Locator_list, boo
     {
         //TODO With two transports mutation not work.
         bool were_created = false;
-        int tries = -1;
+        uint32_t tries = 0;
 
         do
         {
-            if(tries > -1)
+            if(tries > 0)
             {
                 *it_loc = applyLocatorAdaptRule(*it_loc);
             }
             were_created = m_network_Factory.build_send_resources(send_resource_list_, *it_loc);
             ++tries;
-        } while (!were_created && ApplyMutation && (tries < MutationTries));
+        } while (!were_created && ApplyMutation && (tries <= m_att.builtin.mutation_tries));
     }
 }
 

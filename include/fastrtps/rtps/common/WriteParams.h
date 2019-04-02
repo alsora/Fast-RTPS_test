@@ -38,10 +38,14 @@ namespace eprosima
                     /*!
                      * @brief Default constructor.
                      */
+<<<<<<< HEAD
                     WriteParams()
                         : max_blocking_time_point_(std::chrono::steady_clock::now() + std::chrono::hours(24))
                     {
                     }
+=======
+                    WriteParams() = default;
+>>>>>>> upstream/feature/write_nonblocking
 
                     /*!
                      * @brief Copy constructor.
@@ -49,7 +53,10 @@ namespace eprosima
                     WriteParams(const WriteParams &wparam)
                         : sample_identity_(wparam.sample_identity_)
                         , related_sample_identity_(wparam.related_sample_identity_)
+<<<<<<< HEAD
                         , max_blocking_time_point_(wparam.max_blocking_time_point_)
+=======
+>>>>>>> upstream/feature/write_nonblocking
                     {
                     }
 
@@ -59,7 +66,10 @@ namespace eprosima
                     WriteParams(WriteParams &&wparam)
                         : sample_identity_(std::move(wparam.sample_identity_))
                         , related_sample_identity_(std::move(wparam.related_sample_identity_))
+<<<<<<< HEAD
                         , max_blocking_time_point_(std::move(wparam.max_blocking_time_point_))
+=======
+>>>>>>> upstream/feature/write_nonblocking
                     {
                     }
 
@@ -129,6 +139,7 @@ namespace eprosima
                         return related_sample_identity_;
                     }
 
+<<<<<<< HEAD
                     WriteParams& max_blocking_time_point(const std::chrono::steady_clock::time_point &time_point)
                     {
                         max_blocking_time_point_ = time_point;
@@ -151,6 +162,8 @@ namespace eprosima
                         return max_blocking_time_point_;
                     }
 
+=======
+>>>>>>> upstream/feature/write_nonblocking
                 private:
 
                     SampleIdentity sample_identity_;
