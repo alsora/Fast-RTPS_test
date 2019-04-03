@@ -267,9 +267,9 @@ add_subdirectory(src/cpp)
 ###############################################################################
 # Testing options
 ###############################################################################
-enable_testing()
-include(CTest)
-add_subdirectory(test)
+#enable_testing()
+#include(CTest)
+#add_subdirectory(test)
 
 ###############################################################################
 # Examples
